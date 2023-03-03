@@ -23,8 +23,10 @@ int main(int argc, char* argv[]){
 
     MPI_Barrier(MPI_COMM_WORLD);
     
+    incrementador = size;
+    
     for(i = 1; i <= qntd_etapas; i++){
-        incrementador = size/pow(2,1);
+        incrementador = incrementador >> 1;
         qntd_comm = pow(2, i-1);
         for(j = 0; j < qntd_comm; j++){
             source = j*inc_aux;

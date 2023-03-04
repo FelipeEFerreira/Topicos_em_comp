@@ -3,18 +3,16 @@
 #include <math.h>
 #include "mpi.h"
 
+void linear(int size, int rank, int* msg);
+void hipercubo(int size, int rank, int* msg);
+
 int main(int argc, char* argv[]){
-    int size, rank, i, j;
-    int incrementador, inc_aux;
-    int source, dest, msg;
-    MPI_Status status;
+    int size, rank;
+    int msg;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WOLRD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    int qntd_etapas = log2(size);
-    int qntd_comm = 0;
 
     if (rank == 0){
         printf("Entre com um inteiro:\n>>");
@@ -22,28 +20,57 @@ int main(int argc, char* argv[]){
     } 
 
     MPI_Barrier(MPI_COMM_WORLD);
-    
-    incrementador = size;
-    
-    for(i = 1; i <= qntd_etapas; i++){
+    //linear(size, rank, &msg);  
+    hipercubo(size, rank, &msg);  
+    MPI_Finalize();
+    return 0;
+}
+
+void linear(int size, int rank, int* msg){
+    int incrementador = size, inc_aux = 0;
+    int source, dest;
+    int qntd_etapas = log2(size);
+    int qntd_comm = 0;
+
+    for(int i = 0; i < qntd_etapas; i++){
         incrementador = incrementador >> 1;
-        qntd_comm = pow(2, i-1);
-        for(j = 0; j < qntd_comm; j++){
+        qntd_comm = pow(2, i);
+        for(int j = 0; j < qntd_comm; j++){
             source = j*inc_aux;
             if(rank == source){
                 dest = rank + incrementador;
-                MPI_Send(&msg, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
+                MPI_Send(msg, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
                 printf("Processo[%d]: Enviei uma mensagem para o processo %d\n", rank, dest);
             }
             dest = source + incrementador;
             if(rank == dest){
-                MPI_Recv(&msg, 1, MPI_INT, source, 0, MPI_COMM_WORLD, &status);
+                MPI_Recv(msg, 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 printf("Processo[%d]: Mensagem recebida do processo %d", rank, source);
             }
         }
         inc_aux = incrementador;
         MPI_Barrier(MPI_COMM_WORLD);
     }
-    MPI_Finalize();
-    return 0;
+}
+
+void hipercubo(int size, int rank, int* msg){
+    int d = log2(size);
+    int mask = pow(2, d) - 1;
+    int dest, source;
+    int potencia; // para não chamar o pow toda hora
+
+    for(int i = d-1; i >= 0; i--){
+        potencia = pow(2,i);
+        mask = mask ^ potencia;
+        if((rank & mask) == 0){
+            if((mask & potencia) == 0){
+                dest = rank ^ potencia;
+                MPI_Send(msg, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
+            }
+            else{
+                source = rank ^ potencia;
+                MPI_Recv(msg, 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            }
+        }
+    }
 }

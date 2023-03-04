@@ -12,7 +12,7 @@ int main(int argc, char* argv[]){
     int choice = 0;
 
     MPI_Init(&argc, &argv);
-    MPI_Comm_size(MPI_COMM_WOLRD, &size);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     if (rank == 0){
@@ -38,11 +38,11 @@ int main(int argc, char* argv[]){
                 printf("finalizando..."); 
                 break;
             default:
-                printf("digite um valor valido);
+                printf("digite um valor valido");
                 break;
         }
         
-    }while(choice != 3)
+    }while(choice != 3);
     
     MPI_Finalize();
     return 0;

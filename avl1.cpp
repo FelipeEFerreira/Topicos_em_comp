@@ -5,44 +5,59 @@
 
 void linear(int size, int rank, int* msg);
 void hipercubo(int size, int rank, int* msg);
+void gera_relatorio(double total_l, double total_h, int msg);
 
 int main(int argc, char* argv[]){
     int size, rank;
     int msg;
-    int choice = 0;
+    double start_l, end_l, total_l;
+    double start_h, end_h, total_h;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     if (rank == 0){
-        printf("Entre com um inteiro:\n>>");
+        printf("Entre com um inteiro:\n");
         scanf("%d", &msg);
-    } 
-    do
-    {
-        printf("digite 1 para linear\n2 para hipercubo\n3 para fechar: ");
-        scanf("%d", &choice);
-        switch(choice)
-        {
-            case 1: 
-                MPI_Barrier(MPI_COMM_WORLD);
-                linear(size, rank, &msg);   
-                break;
-                
-            case 2: 
-                MPI_Barrier(MPI_COMM_WORLD);
-                hipercubo(size, rank, &msg);   
-                break;
-            case 3: 
-                printf("finalizando..."); 
-                break;
-            default:
-                printf("digite um valor valido");
-                break;
-        }
-        
-    }while(choice != 3);
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if(rank == 0){
+        printf(">>Iniciando comunicação linear...\n");
+        start_l = MPI_Wtime();
+    }
+    
+    linear(size, rank, &msg);
+
+    if(rank == 0){
+        end_l = MPI_Wtime();
+        total_l = end_l - start_l;
+    }
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if(rank == 0){
+        printf(">>Iniciando comunicação hipercubo...\n");
+        start_h = MPI_Wtime();
+    }
+
+    hipercubo(size, rank, &msg);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if(rank == 0){
+        end_h = MPI_Wtime();
+        total_h = end_h - start_h;
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if(rank == 0){
+	printf(">>Gerando relatorio...\n");
+        gera_relatorio(total_l, total_h, msg);
+    }
     
     MPI_Finalize();
     return 0;
@@ -62,12 +77,12 @@ void linear(int size, int rank, int* msg){
             if(rank == source){
                 dest = rank + incrementador;
                 MPI_Send(msg, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
-                printf("Process [%d]: Enviei uma mensagem para o processo [%d]\n", rank, dest);
+               // printf("Process [%d]: Enviei uma mensagem para o processo [%d]\n", rank, dest);
             }
             dest = source + incrementador;
             if(rank == dest){
                 MPI_Recv(msg, 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                printf("Processo[%d]: Mensagem recebida do processo [%d]", rank, source);
+               // printf("Process [%d]: Mensagem recebida do processo [%d]\n", rank, source);
             }
         }
         inc_aux = incrementador;
@@ -88,12 +103,20 @@ void hipercubo(int size, int rank, int* msg){
             if((rank & potencia) == 0){ //mudei de mask & potencia pra rank & potencia
                 dest = rank ^ potencia;
                 MPI_Send(msg, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
+		//printf("Process [%d]: Enviei uma mensagem para o processo [%d]\n", rank, dest);
             }
             else{
                 source = rank ^ potencia;
                 MPI_Recv(msg, 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		//printf("Process [%d]: Mensagem recebida do processo [%d]\n", rank, source);
             }
         }
     }
 }
- 
+
+void gera_relatorio(double total_l, double total_h, int msg){
+    printf("---------------Relatorio---------------\n");
+    printf("O tempo gasto para enviar a mensagem [%d] utilizando comunicação linear foi de %lf segundos\n", msg, total_l);
+    printf("O tempo gasto para enviar a mensagem [%d] utilizando comunicação hipercubo foi de %lf segundos\n", msg, total_h);
+    printf("---------------------------------------\n");
+}
